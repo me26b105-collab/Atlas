@@ -1,6 +1,6 @@
 """
-Atlas UI Design System & Stylesheet Configuration.
-Provides a modern dark theme suitable for high-density engineering CAD/CAE tools.
+Atlas UI Design System
+Professional engineering-inspired dark theme.
 """
 
 from PySide6.QtGui import QColor, QPalette
@@ -8,99 +8,326 @@ from PySide6.QtWidgets import QApplication
 
 
 def apply_dark_theme(app: QApplication) -> None:
-    """Configures the application-wide dark palette and QSS stylesheet."""
+    """Apply the Atlas design language."""
+
     app.setStyle("Fusion")
 
-    # Base Dark Palette
     palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor(32, 34, 38))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor(220, 224, 230))
-    palette.setColor(QPalette.ColorRole.Base, QColor(24, 25, 28))
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(32, 34, 38))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(220, 224, 230))
-    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(32, 34, 38))
-    palette.setColor(QPalette.ColorRole.Text, QColor(220, 224, 230))
-    palette.setColor(QPalette.ColorRole.Button, QColor(42, 45, 50))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor(220, 224, 230))
-    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 255, 255))
-    palette.setColor(QPalette.ColorRole.Link, QColor(41, 128, 185))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor(53, 116, 240))
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+
+    palette.setColor(QPalette.ColorRole.Window, QColor("#1B1D22"))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor("#E6EAF0"))
+
+    palette.setColor(QPalette.ColorRole.Base, QColor("#17191D"))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#20242B"))
+
+    palette.setColor(QPalette.ColorRole.Text, QColor("#E6EAF0"))
+
+    palette.setColor(QPalette.ColorRole.Button, QColor("#2B3038"))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#E6EAF0"))
+
+    palette.setColor(QPalette.ColorRole.Highlight, QColor("#2F7AF8"))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#FFFFFF"))
+
+    palette.setColor(QPalette.ColorRole.Link, QColor("#5EA1FF"))
 
     app.setPalette(palette)
 
-    # QSS Styling for Docks, Toolbars, and Views
-    qss = """
-    QMainWindow {
-        background-color: #1a1c1e;
-    }
-    
-    QMenuBar {
-        background-color: #202226;
-        color: #dce0e6;
-        border-bottom: 1px solid #2d3037;
-        font-size: 13px;
-    }
-    QMenuBar::item {
-        background: transparent;
-        padding: 6px 12px;
-    }
-    QMenuBar::item:selected {
-        background-color: #2d3037;
-        color: #ffffff;
-    }
-    QMenu {
-        background-color: #202226;
-        color: #dce0e6;
-        border: 1px solid #2d3037;
-    }
-    QMenu::item {
-        padding: 6px 24px 6px 12px;
-    }
-    QMenu::item:selected {
-        background-color: #3574f0;
-        color: #ffffff;
+    app.setStyleSheet("""
+
+    /* =======================================================
+                        Main Window
+    ======================================================= */
+
+    QMainWindow{
+        background:#1B1D22;
     }
 
-    QToolBar {
-        background-color: #202226;
-        border-bottom: 1px solid #2d3037;
-        spacing: 4px;
-        padding: 2px;
+    /* =======================================================
+                        Menu Bar
+    ======================================================= */
+
+    QMenuBar{
+
+        background:#20242B;
+
+        border:none;
+        border-bottom:1px solid #343942;
+
+        color:#E6EAF0;
+
+        spacing:6px;
+
+        padding:4px;
+
+        font-size:13px;
     }
 
-    QDockWidget {
-        color: #dce0e6;
-        titlebar-close-icon: url(none);
-        titlebar-normal-icon: url(none);
-        font-weight: bold;
-        font-size: 12px;
-    }
-    QDockWidget::title {
-        background-color: #25282e;
-        padding: 8px 12px;
-        border-bottom: 1px solid #2d3037;
-        text-align: left;
+    QMenuBar::item{
+
+        padding:7px 14px;
+
+        border-radius:6px;
+
+        background:transparent;
+
     }
 
-    QTreeWidget, QTableWidget {
-        background-color: #18191c;
-        border: 1px solid #2d3037;
-        color: #dce0e6;
-        gridline-color: #2d3037;
-    }
-    QHeaderView::section {
-        background-color: #202226;
-        color: #a0a5b0;
-        padding: 4px;
-        border: 1px solid #2d3037;
-        font-weight: bold;
+    QMenuBar::item:selected{
+
+        background:#2F7AF8;
+
+        color:white;
+
     }
 
-    QStatusBar {
-        background-color: #18191c;
-        color: #808692;
-        border-top: 1px solid #2d3037;
+    /* =======================================================
+                            Menus
+    ======================================================= */
+
+    QMenu{
+
+        background:#252A31;
+
+        color:white;
+
+        border:1px solid #3A404A;
+
+        padding:6px;
+
     }
-    """
-    app.setStyleSheet(qss)
+
+    QMenu::item{
+
+        padding:8px 30px 8px 12px;
+
+        border-radius:5px;
+
+    }
+
+    QMenu::item:selected{
+
+        background:#2F7AF8;
+
+    }
+
+    /* =======================================================
+                        Toolbars
+    ======================================================= */
+
+    QToolBar{
+
+        background:#20242B;
+
+        border:none;
+
+        border-bottom:1px solid #343942;
+
+        spacing:6px;
+
+        padding:6px;
+
+    }
+
+    QToolButton{
+
+        background:transparent;
+
+        border-radius:6px;
+
+        padding:6px;
+
+    }
+
+    QToolButton:hover{
+
+        background:#303642;
+
+    }
+
+    QToolButton:pressed{
+
+        background:#2F7AF8;
+
+    }
+
+    /* =======================================================
+                        Dock Widgets
+    ======================================================= */
+
+    QDockWidget{
+
+        color:white;
+
+        font-size:12px;
+
+        font-weight:bold;
+
+    }
+
+    QDockWidget::title{
+
+        background:#242830;
+
+        border-bottom:1px solid #353B45;
+
+        padding:10px;
+
+        text-align:left;
+
+    }
+
+    /* =======================================================
+                            Trees
+    ======================================================= */
+
+    QTreeWidget{
+
+        background:#17191D;
+
+        border:none;
+
+        outline:none;
+
+        color:#DCE2EA;
+
+        padding:4px;
+
+    }
+
+    QTreeWidget::item{
+
+        padding:5px;
+
+        border-radius:5px;
+
+    }
+
+    QTreeWidget::item:selected{
+
+        background:#2F7AF8;
+
+        color:white;
+
+    }
+
+    QTreeWidget::item:hover{
+
+        background:#303642;
+
+    }
+
+    /* =======================================================
+                            Tables
+    ======================================================= */
+
+    QTableWidget{
+
+        background:#17191D;
+
+        border:none;
+
+        gridline-color:#30343B;
+
+        color:#E6EAF0;
+
+    }
+
+    QHeaderView::section{
+
+        background:#20242B;
+
+        color:#9AA3AE;
+
+        border:none;
+
+        border-bottom:1px solid #30343B;
+
+        padding:6px;
+
+    }
+
+    /* =======================================================
+                        Status Bar
+    ======================================================= */
+
+    QStatusBar{
+
+        background:#20242B;
+
+        border-top:1px solid #353B45;
+
+        color:#A5ADB8;
+
+    }
+
+    /* =======================================================
+                        Scrollbars
+    ======================================================= */
+
+    QScrollBar:vertical{
+
+        background:#20242B;
+
+        width:12px;
+
+        border:none;
+
+    }
+
+    QScrollBar::handle:vertical{
+
+        background:#4B5563;
+
+        border-radius:5px;
+
+        min-height:24px;
+
+    }
+
+    QScrollBar::handle:vertical:hover{
+
+        background:#6A7483;
+
+    }
+
+    QScrollBar::add-line:vertical,
+    QScrollBar::sub-line:vertical{
+
+        height:0px;
+
+    }
+
+    QScrollBar:horizontal{
+
+        background:#20242B;
+
+        height:12px;
+
+        border:none;
+
+    }
+
+    QScrollBar::handle:horizontal{
+
+        background:#4B5563;
+
+        border-radius:5px;
+
+        min-width:24px;
+
+    }
+
+    QScrollBar::handle:horizontal:hover{
+
+        background:#6A7483;
+
+    }
+
+    QScrollBar::add-line:horizontal,
+    QScrollBar::sub-line:horizontal{
+
+        width:0px;
+
+    }
+
+    """)
