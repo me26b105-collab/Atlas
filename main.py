@@ -12,6 +12,8 @@ from styles import apply_dark_theme
 
 def main() -> None:
     app = QApplication(sys.argv)
+    app.setOrganizationName("Atlas Engineering")
+    app.setApplicationName("Atlas")
 
     # Apply Atlas dark design system styling
     apply_dark_theme(app)

@@ -42,6 +42,64 @@ def apply_dark_theme(app: QApplication) -> None:
         background:#1B1D22;
     }
 
+    /* Welcome workspace */
+    #WelcomePage{
+        background:qradialgradient(cx:0.5, cy:0.35, radius:0.9,
+            fx:0.5, fy:0.35, stop:0 #242B36, stop:0.55 #171A1F, stop:1 #101214);
+    }
+
+    #WelcomeTitle{
+        font-size:48px;
+        font-weight:700;
+        letter-spacing:7px;
+        color:#F1F4F8;
+    }
+
+    #WelcomeVersion, #WelcomeMeta, #WelcomeFooter{
+        color:#778391;
+        font-size:11px;
+        letter-spacing:1px;
+    }
+
+    #WelcomeSubtitle{
+        color:#B9C2CE;
+        font-size:16px;
+    }
+
+    #WelcomeRecents{
+        color:#8D99A8;
+        font-size:12px;
+        line-height:1.5;
+    }
+
+    #WelcomeRecents a{
+        color:#73A9FF;
+        text-decoration:none;
+    }
+
+    #WelcomePrimaryButton, #WelcomeSecondaryButton{
+        min-width:138px;
+        padding:9px 16px;
+        border-radius:6px;
+        font-size:13px;
+    }
+
+    #WelcomePrimaryButton{
+        background:#2F7AF8;
+        color:white;
+        border:1px solid #4B8DFF;
+    }
+
+    #WelcomePrimaryButton:hover{ background:#4389FA; }
+
+    #WelcomeSecondaryButton{
+        background:#252B34;
+        color:#E6EAF0;
+        border:1px solid #46505F;
+    }
+
+    #WelcomeSecondaryButton:hover{ background:#303846; }
+
     /* =======================================================
                         Menu Bar
     ======================================================= */

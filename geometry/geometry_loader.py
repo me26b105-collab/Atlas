@@ -14,10 +14,10 @@ class GeometryLoader:
     def load(self, filename: str) -> str:
         path = Path(filename)
 
-        if not path.exists():
+        if not path.is_file():
             raise FileNotFoundError(filename)
 
         if path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError("Unsupported file format.")
+            raise ValueError("Unsupported format. Atlas supports STL and OBJ geometry.")
 
         return str(path)

@@ -1,0 +1,26 @@
+{
+  "format": "Atlas Project",
+  "version": "0.0.5",
+  "geometry_path": "C:\\Users\\vaibh\\OneDrive\\Desktop\\Project\\Ver 0.0.4\\stl files\\cube.stl",
+  "camera": [
+    [
+      1.4881712494156332,
+      6.043720269362518,
+      2.4583330386535125
+    ],
+    [
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.18291068788646572,
+      -0.4087359429413987,
+      0.8941356771791996
+    ]
+  ],
+  "wireframe": true,
+  "materials": {},
+  "mesh": {},
+  "physics": {}
+}
