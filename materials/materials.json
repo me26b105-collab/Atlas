@@ -1,0 +1,38 @@
+[
+    {
+        "name": "Steel",
+        "uuid": "builtin-steel",
+        "density": 7850.0,
+        "youngs_modulus": 210000000000.0,
+        "poisson_ratio": 0.3,
+        "thermal_conductivity": 50.0,
+        "coefficient_thermal_expansion": 1.2e-05,
+        "yield_strength": 250000000.0,
+        "ultimate_strength": 460000000.0,
+        "is_readonly": true
+    },
+    {
+        "name": "Aluminium",
+        "uuid": "builtin-aluminium",
+        "density": 2700.0,
+        "youngs_modulus": 69000000000.0,
+        "poisson_ratio": 0.33,
+        "thermal_conductivity": 237.0,
+        "coefficient_thermal_expansion": 2.3e-05,
+        "yield_strength": 276000000.0,
+        "ultimate_strength": 310000000.0,
+        "is_readonly": true
+    },
+    {
+        "name": "Custom",
+        "uuid": "custom-material",
+        "density": null,
+        "youngs_modulus": null,
+        "poisson_ratio": null,
+        "thermal_conductivity": null,
+        "coefficient_thermal_expansion": null,
+        "yield_strength": null,
+        "ultimate_strength": null,
+        "is_readonly": false
+    }
+]
