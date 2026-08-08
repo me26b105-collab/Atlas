@@ -1,15 +1,15 @@
 {
   "format": "Atlas Project",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "objects": [
     {
-      "uuid": "5b9a12f3-2887-4498-b0f8-7d769ed36e72",
+      "uuid": "3cfa6c05-47f5-40a6-9cfd-ccd17bb5a4e1",
       "display_name": "cube",
       "original_filename": "cube.stl",
       "file_path": "C:\\Users\\vaibh\\OneDrive\\Desktop\\Project\\Ver 0.0.6\\stl files\\cube.stl",
       "visible": true,
       "opacity": 1.0,
-      "color": "#D8DDE6",
+      "color": "#b6ff1a",
       "edge_visibility": true,
       "wireframe": true,
       "render_mode": "surface",
@@ -17,15 +17,15 @@
       "material": {},
       "mesh": {},
       "physics": {},
-      "creation_time": "2026-08-08T12:26:02.433469+00:00",
-      "last_modified": "2026-08-08T12:27:41.758140+00:00"
+      "creation_time": "2026-08-08T13:26:10.385109+00:00",
+      "last_modified": "2026-08-08T13:26:30.898042+00:00"
     }
   ],
   "camera": [
     [
-      0.9639605075765557,
-      -0.19775046201416063,
-      -6.939874689840228
+      -1.7995220987603722,
+      4.8658612708472475,
+      1.9166651562151507
     ],
     [
       0.0,
@@ -33,16 +33,50 @@
       0.0
     ],
     [
-      0.6246691963079244,
-      0.7782134634385645,
-      0.06459257315640808
+      0.8347275620494814,
+      0.43942596153718316,
+      -0.3318655171632802
     ]
   ],
   "selection": [
-    "5b9a12f3-2887-4498-b0f8-7d769ed36e72"
+    "3cfa6c05-47f5-40a6-9cfd-ccd17bb5a4e1"
   ],
   "materials": {},
   "mesh": {},
-  "physics": {},
+  "physics": {
+    "loads": [
+      {
+        "name": "force1",
+        "load_type": "Force",
+        "magnitude": 10.0,
+        "direction_x": 0.0,
+        "direction_y": 0.0,
+        "direction_z": 1.0,
+        "location_x": 0.0,
+        "location_y": 0.0,
+        "location_z": 0.0,
+        "object_id": "3cfa6c05-47f5-40a6-9cfd-ccd17bb5a4e1",
+        "uuid": "ef9b4433-854d-48c2-b2d4-fb2dc5c8567b",
+        "enabled": true,
+        "extra": {}
+      }
+    ],
+    "constraints": [
+      {
+        "name": "support1",
+        "constraint_type": "Fixed",
+        "location_x": 0.0,
+        "location_y": 0.0,
+        "location_z": 0.0,
+        "direction_x": 0.0,
+        "direction_y": 0.0,
+        "direction_z": 1.0,
+        "object_id": "3cfa6c05-47f5-40a6-9cfd-ccd17bb5a4e1",
+        "uuid": "38ea0f3d-debd-48ac-954e-18a274eeabba",
+        "enabled": true,
+        "extra": {}
+      }
+    ]
+  },
   "results": {}
 }

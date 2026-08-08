@@ -16,14 +16,19 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from components.material_editor import (
+    MaterialEditorDialog,
+)
 from components.menu_bar import AtlasMenuBar
 from components.mesh_dock import MeshDock
+from components.physics_dialog import (
+    PhysicsEditorDialog,
+)
 from components.project_dock import ProjectDock
 from components.properties_dock import PropertiesDock
 from components.status_bar import AtlasStatusBar
 from components.tool_bar import AtlasToolBar
 from components.viewport import AtlasViewport
-from components.material_editor import MaterialEditorDialog
 
 from geometry.geometry_loader import GeometryLoader
 from geometry.mesh_manager import MeshManager
@@ -32,31 +37,64 @@ from geometry.scene import SceneManager
 
 from materials.material_manager import MaterialManager
 
+from physics.constraint import ConstraintManager
+from physics.load import LoadManager
+
 
 class AtlasMainWindow(QMainWindow):
     """Coordinates Atlas services and presentation widgets."""
 
-    GEOMETRY_FILTER = "Geometry Files (*.stl *.obj)"
-    PROJECT_FILTER = "Atlas Projects (*.atlas)"
+    GEOMETRY_FILTER = (
+        "Geometry Files (*.stl *.obj)"
+    )
+
+    PROJECT_FILTER = (
+        "Atlas Projects (*.atlas)"
+    )
 
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Atlas v0.0.8")
-        self.resize(1400, 900)
+        self.setWindowTitle(
+            "Atlas v0.0.9"
+        )
 
-        self.geometry_loader = GeometryLoader()
-        self.project_manager = ProjectManager()
+        self.resize(
+            1400,
+            900,
+        )
+
+        self.geometry_loader = (
+            GeometryLoader()
+        )
+
+        self.project_manager = (
+            ProjectManager()
+        )
+
         self.scene = SceneManager()
 
-        self.material_manager = MaterialManager()
+        self.material_manager = (
+            MaterialManager()
+        )
 
-        # NEW v0.0.8
-        self.mesh_manager = MeshManager()
+        self.mesh_manager = (
+            MeshManager()
+        )
+
         self.mesh_actor = None
 
-        self.current_geometry_path: str | None = None
-        self.current_project_path: str | None = None
+        # NEW v0.0.9
+        self.load_manager = (
+            LoadManager()
+        )
+
+        self.constraint_manager = (
+            ConstraintManager()
+        )
+
+        self.current_geometry_path = None
+        self.current_project_path = None
 
         self._configure_logging()
         self._init_layout()
@@ -67,22 +105,44 @@ class AtlasMainWindow(QMainWindow):
             self.material_manager.materials()
         )
 
-        self.autosave_timer = QTimer(self)
+        self.project_dock.refresh_physics(
+            self.load_manager.all(),
+            self.constraint_manager.all(),
+        )
+
+        self.autosave_timer = QTimer(
+            self
+        )
+
         self.autosave_timer.timeout.connect(
             self._autosave
         )
-        self.autosave_timer.start(180_000)
+
+        self.autosave_timer.start(
+            180_000
+        )
 
     # =====================================================
-    # Setup
+    # SETUP
     # =====================================================
 
-    def _configure_logging(self) -> None:
-        log_dir = Path.cwd() / "logs"
-        log_dir.mkdir(exist_ok=True)
+    def _configure_logging(
+        self,
+    ) -> None:
+        log_dir = (
+            Path.cwd()
+            / "logs"
+        )
+
+        log_dir.mkdir(
+            exist_ok=True
+        )
 
         logging.basicConfig(
-            filename=log_dir / "atlas.log",
+            filename=(
+                log_dir
+                / "atlas.log"
+            ),
             level=logging.INFO,
             format=(
                 "%(asctime)s "
@@ -91,7 +151,9 @@ class AtlasMainWindow(QMainWindow):
             ),
         )
 
-    def _init_layout(self) -> None:
+    def _init_layout(
+        self,
+    ) -> None:
         self.viewport = AtlasViewport(
             self.scene,
             self,
@@ -101,12 +163,17 @@ class AtlasMainWindow(QMainWindow):
             self.viewport
         )
 
-        self.menu_bar = AtlasMenuBar(self)
+        self.menu_bar = AtlasMenuBar(
+            self
+        )
+
         self.setMenuBar(
             self.menu_bar
         )
 
-        self.tool_bar = AtlasToolBar(self)
+        self.tool_bar = AtlasToolBar(
+            self
+        )
 
         self.addToolBar(
             Qt.ToolBarArea.TopToolBarArea,
@@ -123,8 +190,8 @@ class AtlasMainWindow(QMainWindow):
             self.project_dock,
         )
 
-        self.properties_dock = PropertiesDock(
-            self
+        self.properties_dock = (
+            PropertiesDock(self)
         )
 
         self.addDockWidget(
@@ -132,8 +199,9 @@ class AtlasMainWindow(QMainWindow):
             self.properties_dock,
         )
 
-        # NEW v0.0.8
-        self.mesh_dock = MeshDock(self)
+        self.mesh_dock = MeshDock(
+            self
+        )
 
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea,
@@ -150,7 +218,13 @@ class AtlasMainWindow(QMainWindow):
             self.status_bar
         )
 
-    def _connect_signals(self) -> None:
+    # =====================================================
+    # SIGNALS
+    # =====================================================
+
+    def _connect_signals(
+        self,
+    ) -> None:
         m = self.menu_bar
         t = self.tool_bar
         v = self.viewport
@@ -269,7 +343,7 @@ class AtlasMainWindow(QMainWindow):
         )
 
         # -------------------------------------------------
-        # Geometry project tree
+        # Geometry tree
         # -------------------------------------------------
 
         d.selection_requested.connect(
@@ -294,7 +368,9 @@ class AtlasMainWindow(QMainWindow):
 
         d.properties_requested.connect(
             lambda object_id:
-            self.scene.select([object_id])
+            self.scene.select(
+                [object_id]
+            )
         )
 
         # -------------------------------------------------
@@ -318,7 +394,7 @@ class AtlasMainWindow(QMainWindow):
         )
 
         # -------------------------------------------------
-        # NEW v0.0.8 Mesh
+        # Mesh
         # -------------------------------------------------
 
         d.mesh_requested.connect(
@@ -335,6 +411,38 @@ class AtlasMainWindow(QMainWindow):
 
         self.mesh_dock.clear_mesh_requested.connect(
             self.clear_generated_mesh
+        )
+
+        # -------------------------------------------------
+        # Physics
+        # -------------------------------------------------
+
+        d.physics_selection_requested.connect(
+            self._physics_selection_changed
+        )
+
+        d.add_load_requested.connect(
+            self._add_load
+        )
+
+        d.edit_load_requested.connect(
+            self._edit_load
+        )
+
+        d.delete_load_requested.connect(
+            self._delete_load
+        )
+
+        d.add_constraint_requested.connect(
+            self._add_constraint
+        )
+
+        d.edit_constraint_requested.connect(
+            self._edit_constraint
+        )
+
+        d.delete_constraint_requested.connect(
+            self._delete_constraint
         )
 
         # -------------------------------------------------
@@ -356,17 +464,20 @@ class AtlasMainWindow(QMainWindow):
         )
 
     # =====================================================
-    # Mesh
+    # MESH
     # =====================================================
 
-    def show_mesh_dock(self) -> None:
-        """Show the mesh controls."""
-
+    def show_mesh_dock(
+        self,
+    ) -> None:
         if not self.scene.selected_objects():
             QMessageBox.information(
                 self,
                 "Mesh",
-                "Select a geometry object first.",
+                (
+                    "Select a geometry "
+                    "object first."
+                ),
             )
             return
 
@@ -377,8 +488,12 @@ class AtlasMainWindow(QMainWindow):
             "Mesh controls opened."
         )
 
-    def _selected_geometry_mesh(self):
-        selected = self.scene.selected_objects()
+    def _selected_geometry_mesh(
+        self,
+    ):
+        selected = (
+            self.scene.selected_objects()
+        )
 
         if not selected:
             raise ValueError(
@@ -392,10 +507,10 @@ class AtlasMainWindow(QMainWindow):
         element_size: float,
         refinement: int,
     ) -> None:
-        """Generate and display a surface mesh."""
-
         try:
-            geometry = self._selected_geometry_mesh()
+            geometry = (
+                self._selected_geometry_mesh()
+            )
 
             mesh = (
                 self.mesh_manager
@@ -429,9 +544,15 @@ class AtlasMainWindow(QMainWindow):
             )
 
             self.mesh_dock.set_quality(
-                quality.get("minimum_area"),
-                quality.get("average_area"),
-                quality.get("maximum_area"),
+                quality.get(
+                    "minimum_area"
+                ),
+                quality.get(
+                    "average_area"
+                ),
+                quality.get(
+                    "maximum_area"
+                ),
             )
 
             self.status_bar.set_message(
@@ -454,10 +575,10 @@ class AtlasMainWindow(QMainWindow):
         element_size: float,
         refinement: int,
     ) -> None:
-        """Generate and display a volume mesh."""
-
         try:
-            geometry = self._selected_geometry_mesh()
+            geometry = (
+                self._selected_geometry_mesh()
+            )
 
             mesh = (
                 self.mesh_manager
@@ -491,9 +612,15 @@ class AtlasMainWindow(QMainWindow):
             )
 
             self.mesh_dock.set_quality(
-                quality.get("minimum_volume"),
-                quality.get("average_volume"),
-                quality.get("maximum_volume"),
+                quality.get(
+                    "minimum_volume"
+                ),
+                quality.get(
+                    "average_volume"
+                ),
+                quality.get(
+                    "maximum_volume"
+                ),
             )
 
             self.status_bar.set_message(
@@ -516,8 +643,6 @@ class AtlasMainWindow(QMainWindow):
         mesh,
         wireframe: bool = True,
     ) -> None:
-        """Display a generated mesh in the viewport."""
-
         self._remove_mesh_actor()
 
         self.mesh_actor = (
@@ -533,7 +658,9 @@ class AtlasMainWindow(QMainWindow):
         self.viewport.plotter.reset_camera()
         self.viewport.plotter.render()
 
-    def _remove_mesh_actor(self) -> None:
+    def _remove_mesh_actor(
+        self,
+    ) -> None:
         if self.mesh_actor is not None:
             try:
                 self.viewport.plotter.remove_actor(
@@ -545,11 +672,13 @@ class AtlasMainWindow(QMainWindow):
 
             self.mesh_actor = None
 
-    def clear_generated_mesh(self) -> None:
-        """Remove generated mesh visualization."""
-
+    def clear_generated_mesh(
+        self,
+    ) -> None:
         self._remove_mesh_actor()
+
         self.mesh_manager.clear()
+
         self.mesh_dock.clear_statistics()
 
         self.viewport.plotter.render()
@@ -559,7 +688,463 @@ class AtlasMainWindow(QMainWindow):
         )
 
     # =====================================================
-    # Materials
+    # PHYSICS
+    # =====================================================
+
+    def _physics_selection_changed(
+        self,
+        physics_type: str,
+        physics_id: str,
+    ) -> None:
+        if physics_type == "load":
+            load = (
+                self.load_manager.get(
+                    physics_id
+                )
+            )
+
+            if load:
+                self.properties_dock.set_physics_load(
+                    load
+                )
+
+        elif physics_type == "constraint":
+            constraint = (
+                self.constraint_manager.get(
+                    physics_id
+                )
+            )
+
+            if constraint:
+                self.properties_dock.set_physics_constraint(
+                    constraint
+                )
+
+    def _physics_object_id(self) -> str | None:
+        selected = (
+            self.scene.selected_objects()
+        )
+
+        if not selected:
+            QMessageBox.information(
+                self,
+                "Physics",
+                (
+                    "Select a geometry "
+                    "object first."
+                ),
+            )
+
+            return None
+
+        return selected[0].uuid
+
+    def _physics_object_name(self) -> str:
+        selected = (
+            self.scene.selected_objects()
+        )
+
+        if not selected:
+            return ""
+
+        return selected[0].display_name
+
+    def _add_load(
+        self,
+        load_type: str,
+    ) -> None:
+        object_id = (
+            self._physics_object_id()
+        )
+
+        if object_id is None:
+            return
+
+        dialog = PhysicsEditorDialog(
+            "Load",
+            object_name=self._physics_object_name(),
+            parent=self,
+        )
+
+        index = dialog.type_box.findText(
+            load_type
+        )
+
+        if index >= 0:
+            dialog.type_box.setCurrentIndex(
+                index
+            )
+
+        if not dialog.exec():
+            return
+
+        values = dialog.values()
+
+        if not values["name"]:
+            QMessageBox.warning(
+                self,
+                "Invalid Load",
+                "Load name cannot be empty.",
+            )
+            return
+
+        try:
+            self.load_manager.create(
+                load_type=values["type"],
+                name=values["name"],
+                magnitude=values["magnitude"],
+                direction_x=values[
+                    "direction_x"
+                ],
+                direction_y=values[
+                    "direction_y"
+                ],
+                direction_z=values[
+                    "direction_z"
+                ],
+                location_x=values[
+                    "location_x"
+                ],
+                location_y=values[
+                    "location_y"
+                ],
+                location_z=values[
+                    "location_z"
+                ],
+                object_id=object_id,
+            )
+
+            self._refresh_physics_ui()
+
+            self.status_bar.set_message(
+                f"{values['type']} added."
+            )
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Invalid Load",
+                str(error),
+            )
+
+    def _edit_load(
+        self,
+        load_id: str,
+    ) -> None:
+        load = (
+            self.load_manager.get(
+                load_id
+            )
+        )
+
+        if load is None:
+            return
+
+        object_name = ""
+
+        if load.object_id:
+            obj = (
+                self.scene.objects.get(
+                    load.object_id
+                )
+            )
+
+            if obj:
+                object_name = (
+                    obj.display_name
+                )
+
+        dialog = PhysicsEditorDialog(
+            "Load",
+            entity=load,
+            object_name=object_name,
+            parent=self,
+        )
+
+        if not dialog.exec():
+            return
+
+        values = dialog.values()
+
+        try:
+            self.load_manager.update(
+                load_id,
+                name=values["name"],
+                load_type=values["type"],
+                magnitude=values["magnitude"],
+                direction_x=values[
+                    "direction_x"
+                ],
+                direction_y=values[
+                    "direction_y"
+                ],
+                direction_z=values[
+                    "direction_z"
+                ],
+                location_x=values[
+                    "location_x"
+                ],
+                location_y=values[
+                    "location_y"
+                ],
+                location_z=values[
+                    "location_z"
+                ],
+            )
+
+            self._refresh_physics_ui()
+
+            self.status_bar.set_message(
+                "Load modified."
+            )
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Invalid Load",
+                str(error),
+            )
+
+    def _delete_load(
+        self,
+        load_id: str,
+    ) -> None:
+        load = (
+            self.load_manager.get(
+                load_id
+            )
+        )
+
+        if load is None:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Load",
+            (
+                f"Delete '{load.name}'?"
+            ),
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        self.load_manager.remove(
+            load_id
+        )
+
+        self._refresh_physics_ui()
+
+        self.properties_dock.clear_properties()
+
+        self.status_bar.set_message(
+            "Load deleted."
+        )
+
+    def _add_constraint(
+        self,
+        constraint_type: str,
+    ) -> None:
+        object_id = (
+            self._physics_object_id()
+        )
+
+        if object_id is None:
+            return
+
+        dialog = PhysicsEditorDialog(
+            "Support",
+            object_name=self._physics_object_name(),
+            parent=self,
+        )
+
+        index = dialog.type_box.findText(
+            constraint_type
+        )
+
+        if index >= 0:
+            dialog.type_box.setCurrentIndex(
+                index
+            )
+
+        if not dialog.exec():
+            return
+
+        values = dialog.values()
+
+        if not values["name"]:
+            QMessageBox.warning(
+                self,
+                "Invalid Support",
+                "Support name cannot be empty.",
+            )
+            return
+
+        try:
+            self.constraint_manager.create(
+                constraint_type=values[
+                    "type"
+                ],
+                name=values["name"],
+                direction_x=values[
+                    "direction_x"
+                ],
+                direction_y=values[
+                    "direction_y"
+                ],
+                direction_z=values[
+                    "direction_z"
+                ],
+                location_x=values[
+                    "location_x"
+                ],
+                location_y=values[
+                    "location_y"
+                ],
+                location_z=values[
+                    "location_z"
+                ],
+                object_id=object_id,
+            )
+
+            self._refresh_physics_ui()
+
+            self.status_bar.set_message(
+                f"{values['type']} support added."
+            )
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Invalid Support",
+                str(error),
+            )
+
+    def _edit_constraint(
+        self,
+        constraint_id: str,
+    ) -> None:
+        constraint = (
+            self.constraint_manager.get(
+                constraint_id
+            )
+        )
+
+        if constraint is None:
+            return
+
+        object_name = ""
+
+        if constraint.object_id:
+            obj = (
+                self.scene.objects.get(
+                    constraint.object_id
+                )
+            )
+
+            if obj:
+                object_name = (
+                    obj.display_name
+                )
+
+        dialog = PhysicsEditorDialog(
+            "Support",
+            entity=constraint,
+            object_name=object_name,
+            parent=self,
+        )
+
+        if not dialog.exec():
+            return
+
+        values = dialog.values()
+
+        try:
+            self.constraint_manager.update(
+                constraint_id,
+                name=values["name"],
+                constraint_type=values[
+                    "type"
+                ],
+                direction_x=values[
+                    "direction_x"
+                ],
+                direction_y=values[
+                    "direction_y"
+                ],
+                direction_z=values[
+                    "direction_z"
+                ],
+                location_x=values[
+                    "location_x"
+                ],
+                location_y=values[
+                    "location_y"
+                ],
+                location_z=values[
+                    "location_z"
+                ],
+            )
+
+            self._refresh_physics_ui()
+
+            self.status_bar.set_message(
+                "Support modified."
+            )
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Invalid Support",
+                str(error),
+            )
+
+    def _delete_constraint(
+        self,
+        constraint_id: str,
+    ) -> None:
+        constraint = (
+            self.constraint_manager.get(
+                constraint_id
+            )
+        )
+
+        if constraint is None:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Support",
+            (
+                f"Delete '{constraint.name}'?"
+            ),
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        self.constraint_manager.remove(
+            constraint_id
+        )
+
+        self._refresh_physics_ui()
+
+        self.properties_dock.clear_properties()
+
+        self.status_bar.set_message(
+            "Support deleted."
+        )
+
+    def _refresh_physics_ui(
+        self,
+    ) -> None:
+        self.project_dock.refresh_physics(
+            self.load_manager.all(),
+            self.constraint_manager.all(),
+        )
+
+    # =====================================================
+    # MATERIALS
     # =====================================================
 
     def _material_selection_changed(
@@ -585,8 +1170,7 @@ class AtlasMainWindow(QMainWindow):
         )
 
         material = (
-            self.material_manager
-            .get_selected()
+            self.material_manager.get_selected()
         )
 
         if material:
@@ -603,8 +1187,10 @@ class AtlasMainWindow(QMainWindow):
         self,
         material_id: str,
     ) -> None:
-        material = self.material_manager.get(
-            material_id
+        material = (
+            self.material_manager.get(
+                material_id
+            )
         )
 
         if material is None:
@@ -653,8 +1239,10 @@ class AtlasMainWindow(QMainWindow):
         self,
         material_id: str,
     ) -> None:
-        material = self.material_manager.get(
-            material_id
+        material = (
+            self.material_manager.get(
+                material_id
+            )
         )
 
         if material is None:
@@ -678,7 +1266,9 @@ class AtlasMainWindow(QMainWindow):
             "Custom material reset."
         )
 
-    def _save_material(self) -> None:
+    def _save_material(
+        self,
+    ) -> None:
         try:
             self.material_manager.save()
 
@@ -695,14 +1285,15 @@ class AtlasMainWindow(QMainWindow):
                 str(error),
             )
 
-    def _refresh_materials_ui(self) -> None:
+    def _refresh_materials_ui(
+        self,
+    ) -> None:
         self.project_dock.refresh_materials(
             self.material_manager.materials()
         )
 
         material = (
-            self.material_manager
-            .get_selected()
+            self.material_manager.get_selected()
         )
 
         if material:
@@ -711,19 +1302,28 @@ class AtlasMainWindow(QMainWindow):
             )
 
     # =====================================================
-    # Project / geometry
+    # PROJECT / GEOMETRY
     # =====================================================
 
-    def new_project(self) -> None:
-        """Clear all geometry without affecting materials."""
-
+    def new_project(
+        self,
+    ) -> None:
         self.clear_generated_mesh()
 
         self.scene.clear()
+
+        self.load_manager.clear()
+        self.constraint_manager.clear()
+
         self.viewport.rebuild_scene()
 
         self.project_dock.set_project_name(
             "Atlas Project"
+        )
+
+        self.project_dock.refresh_physics(
+            [],
+            [],
         )
 
         self.properties_dock.clear_properties()
@@ -745,12 +1345,16 @@ class AtlasMainWindow(QMainWindow):
             "New Project"
         )
 
-    def open_geometry(self) -> None:
-        filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Import Geometry",
-            "",
-            self.GEOMETRY_FILTER,
+    def open_geometry(
+        self,
+    ) -> None:
+        filename, _ = (
+            QFileDialog.getOpenFileName(
+                self,
+                "Import Geometry",
+                "",
+                self.GEOMETRY_FILTER,
+            )
         )
 
         if filename:
@@ -764,16 +1368,22 @@ class AtlasMainWindow(QMainWindow):
         metadata: dict | None = None,
     ) -> bool:
         try:
-            if len(self.scene.objects):
+            if len(
+                self.scene.objects
+            ):
                 self.new_project()
 
-            path = self.geometry_loader.load(
-                filename
+            path = (
+                self.geometry_loader.load(
+                    filename
+                )
             )
 
-            obj = self.viewport.add_geometry(
-                path,
-                metadata,
+            obj = (
+                self.viewport.add_geometry(
+                    path,
+                    metadata,
+                )
             )
 
             self.current_geometry_path = path
@@ -822,7 +1432,7 @@ class AtlasMainWindow(QMainWindow):
         return False
 
     # =====================================================
-    # Selection
+    # SELECTION
     # =====================================================
 
     def _selection_changed(
@@ -849,16 +1459,25 @@ class AtlasMainWindow(QMainWindow):
 
         self._scene_changed()
 
-    def _scene_changed(self) -> None:
-        stats = self.scene.statistics()
+    def _scene_changed(
+        self,
+    ) -> None:
+        stats = (
+            self.scene.statistics()
+        )
+
         selected = (
             self.scene.selected_objects()
         )
 
         if len(selected) == 1:
             name = selected[0].display_name
+
         elif selected:
-            name = f"{len(selected)} objects"
+            name = (
+                f"{len(selected)} objects"
+            )
+
         else:
             name = "None"
 
@@ -872,22 +1491,30 @@ class AtlasMainWindow(QMainWindow):
         object_id: str,
         name: str | None = None,
     ) -> None:
-        obj = self.scene.objects.get(
-            object_id
+        obj = (
+            self.scene.objects.get(
+                object_id
+            )
         )
 
         if not obj:
             return
 
         if name is None:
-            name, ok = QInputDialog.getText(
-                self,
-                "Rename Geometry",
-                "Name:",
-                text=obj.display_name,
+            name, ok = (
+                QInputDialog.getText(
+                    self,
+                    "Rename Geometry",
+                    "Name:",
+                    text=obj.display_name,
+                )
             )
 
-            name = name if ok else ""
+            name = (
+                name
+                if ok
+                else ""
+            )
 
         if name and name.strip():
             self.scene.update_object(
@@ -895,7 +1522,9 @@ class AtlasMainWindow(QMainWindow):
                 display_name=name.strip(),
             )
 
-    def delete_selected(self) -> None:
+    def delete_selected(
+        self,
+    ) -> None:
         self.delete_objects(
             self.scene.selection.selected_ids
         )
@@ -907,13 +1536,26 @@ class AtlasMainWindow(QMainWindow):
         if not object_ids:
             return
 
-        removed = self.scene.remove(
-            object_ids
+        for object_id in object_ids:
+            self.load_manager.remove_for_object(
+                object_id
+            )
+
+            self.constraint_manager.remove_for_object(
+                object_id
+            )
+
+        removed = (
+            self.scene.remove(
+                object_ids
+            )
         )
 
         self.viewport.remove_objects(
             removed
         )
+
+        self._refresh_physics_ui()
 
         self.status_bar.set_message(
             f"Deleted {len(removed)} object(s)"
@@ -935,10 +1577,12 @@ class AtlasMainWindow(QMainWindow):
             )
 
     # =====================================================
-    # Recent files / screenshots
+    # RECENT FILES / SCREENSHOTS
     # =====================================================
 
-    def _refresh_recent_files(self) -> None:
+    def _refresh_recent_files(
+        self,
+    ) -> None:
         files = (
             self.project_manager
             .recent_files()
@@ -952,12 +1596,16 @@ class AtlasMainWindow(QMainWindow):
             files
         )
 
-    def save_screenshot(self) -> None:
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Screenshot",
-            "atlas_view.png",
-            "PNG (*.png)",
+    def save_screenshot(
+        self,
+    ) -> None:
+        filename, _ = (
+            QFileDialog.getSaveFileName(
+                self,
+                "Save Screenshot",
+                "atlas_view.png",
+                "PNG (*.png)",
+            )
         )
 
         if filename:
@@ -975,38 +1623,58 @@ class AtlasMainWindow(QMainWindow):
             )
 
     # =====================================================
-    # Project persistence
+    # PROJECT PERSISTENCE
     # =====================================================
 
-    def _project_data(self) -> dict:
+    def _project_data(
+        self,
+    ) -> dict:
         return {
             "format": "Atlas Project",
-            "version": "0.0.8",
+            "version": "0.0.9",
+
             "objects": [
                 obj.to_project_dict()
                 for obj in self.scene.objects
             ],
+
             "camera": (
                 self.viewport.camera_state()
                 if len(self.scene.objects)
                 else None
             ),
+
             "selection": (
                 self.scene.selection.selected_ids
             ),
+
             "materials": {},
+
             "mesh": {},
-            "physics": {},
+
+            "physics": {
+                "loads": (
+                    self.load_manager.to_list()
+                ),
+                "constraints": (
+                    self.constraint_manager.to_list()
+                ),
+            },
+
             "results": {},
         }
 
-    def save_project(self) -> None:
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Atlas Project",
-            self.current_project_path
-            or "untitled.atlas",
-            self.PROJECT_FILTER,
+    def save_project(
+        self,
+    ) -> None:
+        filename, _ = (
+            QFileDialog.getSaveFileName(
+                self,
+                "Save Atlas Project",
+                self.current_project_path
+                or "untitled.atlas",
+                self.PROJECT_FILTER,
+            )
         )
 
         if not filename:
@@ -1023,7 +1691,9 @@ class AtlasMainWindow(QMainWindow):
                 self._project_data(),
             )
 
-            self.current_project_path = filename
+            self.current_project_path = (
+                filename
+            )
 
             self.project_manager.add_recent_project(
                 filename
@@ -1053,12 +1723,16 @@ class AtlasMainWindow(QMainWindow):
                 f"{error}"
             )
 
-    def open_project(self) -> None:
-        filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open Atlas Project",
-            "",
-            self.PROJECT_FILTER,
+    def open_project(
+        self,
+    ) -> None:
+        filename, _ = (
+            QFileDialog.getOpenFileName(
+                self,
+                "Open Atlas Project",
+                "",
+                self.PROJECT_FILTER,
+            )
         )
 
         if filename:
@@ -1084,7 +1758,9 @@ class AtlasMainWindow(QMainWindow):
 
             if (
                 objects is None
-                and data.get("geometry_path")
+                and data.get(
+                    "geometry_path"
+                )
             ):
                 objects = [
                     {
@@ -1098,7 +1774,9 @@ class AtlasMainWindow(QMainWindow):
                     }
                 ]
 
-            for item in objects or []:
+            for item in (
+                objects or []
+            ):
                 if not self.load_geometry_file(
                     item["file_path"],
                     item,
@@ -1108,7 +1786,30 @@ class AtlasMainWindow(QMainWindow):
                         f"{item['file_path']}"
                     )
 
-            if data.get("camera"):
+            physics = data.get(
+                "physics",
+                {},
+            )
+
+            self.load_manager.from_list(
+                physics.get(
+                    "loads",
+                    [],
+                )
+            )
+
+            self.constraint_manager.from_list(
+                physics.get(
+                    "constraints",
+                    [],
+                )
+            )
+
+            self._refresh_physics_ui()
+
+            if data.get(
+                "camera"
+            ):
                 self.viewport.restore_camera(
                     data["camera"]
                 )
@@ -1120,7 +1821,9 @@ class AtlasMainWindow(QMainWindow):
                 )
             )
 
-            self.current_project_path = filename
+            self.current_project_path = (
+                filename
+            )
 
             self.project_manager.add_recent_project(
                 filename
@@ -1161,11 +1864,15 @@ class AtlasMainWindow(QMainWindow):
         return False
 
     # =====================================================
-    # Autosave
+    # AUTOSAVE
     # =====================================================
 
-    def _autosave(self) -> None:
-        if len(self.scene.objects):
+    def _autosave(
+        self,
+    ) -> None:
+        if len(
+            self.scene.objects
+        ):
             try:
                 self.project_manager.save_project(
                     str(

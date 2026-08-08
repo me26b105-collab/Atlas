@@ -22,6 +22,7 @@ class ProjectDock(QDockWidget):
     """Presentation-only project tree."""
 
     selection_requested = Signal(list)
+
     rename_requested = Signal(str, str)
     delete_requested = Signal(list)
     visibility_requested = Signal(str, bool)
@@ -32,22 +33,38 @@ class ProjectDock(QDockWidget):
     reset_material_requested = Signal(str)
     save_material_requested = Signal()
 
-    # NEW: v0.0.8
     mesh_requested = Signal()
+
+    physics_selection_requested = Signal(str, str)
+
+    add_load_requested = Signal(str)
+    edit_load_requested = Signal(str)
+    delete_load_requested = Signal(str)
+
+    add_constraint_requested = Signal(str)
+    edit_constraint_requested = Signal(str)
+    delete_constraint_requested = Signal(str)
 
     OBJECT_ID_ROLE = Qt.ItemDataRole.UserRole
     MATERIAL_ID_ROLE = Qt.ItemDataRole.UserRole + 1
+    PHYSICS_ID_ROLE = Qt.ItemDataRole.UserRole + 2
+    PHYSICS_TYPE_ROLE = Qt.ItemDataRole.UserRole + 3
 
     def __init__(
         self,
         scene: SceneManager,
         parent=None,
     ):
-        super().__init__("Project", parent)
+        super().__init__(
+            "Project",
+            parent,
+        )
 
         self.scene = scene
 
-        self.setObjectName("ProjectDock")
+        self.setObjectName(
+            "ProjectDock"
+        )
 
         self.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea
@@ -72,11 +89,20 @@ class ProjectDock(QDockWidget):
         container = QWidget(self)
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(
+            4,
+            4,
+            4,
+            4,
+        )
 
-        self.tree = QTreeWidget(container)
+        self.tree = QTreeWidget(
+            container
+        )
 
-        self.tree.setHeaderHidden(True)
+        self.tree.setHeaderHidden(
+            True
+        )
 
         self.tree.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection
@@ -106,9 +132,13 @@ class ProjectDock(QDockWidget):
             lambda *_: self._store_order()
         )
 
-        layout.addWidget(self.tree)
+        layout.addWidget(
+            self.tree
+        )
 
-        self.setWidget(container)
+        self.setWidget(
+            container
+        )
 
         self._create_nodes()
 
@@ -156,6 +186,16 @@ class ProjectDock(QDockWidget):
             ["Physics"],
         )
 
+        self.loads_node = QTreeWidgetItem(
+            self.physics_node,
+            ["Loads"],
+        )
+
+        self.constraints_node = QTreeWidgetItem(
+            self.physics_node,
+            ["Supports"],
+        )
+
         self.results_node = QTreeWidgetItem(
             self.root_item,
             ["Results"],
@@ -166,16 +206,38 @@ class ProjectDock(QDockWidget):
             ["Screenshots"],
         )
 
-        self.root_item.setExpanded(True)
-        self.geometry_node.setExpanded(True)
-        self.materials_node.setExpanded(True)
+        self.root_item.setExpanded(
+            True
+        )
+
+        self.geometry_node.setExpanded(
+            True
+        )
+
+        self.materials_node.setExpanded(
+            True
+        )
+
+        self.physics_node.setExpanded(
+            True
+        )
+
+        self.loads_node.setExpanded(
+            True
+        )
+
+        self.constraints_node.setExpanded(
+            True
+        )
+
+    # =====================================================
+    # MATERIALS
+    # =====================================================
 
     def refresh_materials(
         self,
         materials: list,
     ) -> None:
-        """Populate the Materials library."""
-
         self.materials_node.takeChildren()
 
         for material in materials:
@@ -195,10 +257,88 @@ class ProjectDock(QDockWidget):
                 material.uuid,
             )
 
-        self.materials_node.setExpanded(True)
+        self.materials_node.setExpanded(
+            True
+        )
+
+    # =====================================================
+    # PHYSICS
+    # =====================================================
+
+    def refresh_physics(
+        self,
+        loads: list,
+        constraints: list,
+    ) -> None:
+        self.loads_node.takeChildren()
+        self.constraints_node.takeChildren()
+
+        for load in loads:
+            item = QTreeWidgetItem(
+                self.loads_node,
+                [load.name],
+            )
+
+            item.setData(
+                0,
+                self.PHYSICS_ID_ROLE,
+                load.uuid,
+            )
+
+            item.setData(
+                0,
+                self.PHYSICS_TYPE_ROLE,
+                "load",
+            )
+
+            item.setToolTip(
+                0,
+                load.load_type,
+            )
+
+        for constraint in constraints:
+            item = QTreeWidgetItem(
+                self.constraints_node,
+                [constraint.name],
+            )
+
+            item.setData(
+                0,
+                self.PHYSICS_ID_ROLE,
+                constraint.uuid,
+            )
+
+            item.setData(
+                0,
+                self.PHYSICS_TYPE_ROLE,
+                "constraint",
+            )
+
+            item.setToolTip(
+                0,
+                constraint.constraint_type,
+            )
+
+        self.physics_node.setExpanded(
+            True
+        )
+
+        self.loads_node.setExpanded(
+            True
+        )
+
+        self.constraints_node.setExpanded(
+            True
+        )
+
+    # =====================================================
+    # GEOMETRY
+    # =====================================================
 
     def refresh(self) -> None:
-        blocked = self.tree.blockSignals(True)
+        blocked = self.tree.blockSignals(
+            True
+        )
 
         self.geometry_node.takeChildren()
 
@@ -228,35 +368,78 @@ class ProjectDock(QDockWidget):
                 obj.file_path,
             )
 
-        self.geometry_node.setExpanded(True)
+        self.geometry_node.setExpanded(
+            True
+        )
 
-        self.tree.blockSignals(blocked)
+        self.tree.blockSignals(
+            blocked
+        )
 
         self._sync_selection(
             self.scene.selection.selected_ids
         )
 
-    def _tree_selection_changed(self) -> None:
-        """Handle tree selection without clearing geometry selection for action nodes."""
+    # =====================================================
+    # SELECTION
+    # =====================================================
 
-        selected_items = self.tree.selectedItems()
+    def _tree_selection_changed(
+        self,
+    ) -> None:
+        selected_items = (
+            self.tree.selectedItems()
+        )
 
-        # Mesh, Materials, Physics, Results, Screenshots, etc.
-        # are action/category nodes and should not change the
-        # currently selected geometry objects.
         action_nodes = {
             self.root_item,
             self.geometry_node,
             self.materials_node,
             self.mesh_node,
             self.physics_node,
+            self.loads_node,
+            self.constraints_node,
             self.results_node,
             self.screenshots_node,
         }
 
-        # If the user clicked an action/category node, preserve
-        # the existing scene selection.
-        if any(item in action_nodes for item in selected_items):
+        physics_items = []
+
+        for item in selected_items:
+            physics_id = item.data(
+                0,
+                self.PHYSICS_ID_ROLE,
+            )
+
+            physics_type = item.data(
+                0,
+                self.PHYSICS_TYPE_ROLE,
+            )
+
+            if physics_id and physics_type:
+                physics_items.append(
+                    (
+                        physics_type,
+                        physics_id,
+                    )
+                )
+
+        if physics_items:
+            physics_type, physics_id = (
+                physics_items[0]
+            )
+
+            self.physics_selection_requested.emit(
+                physics_type,
+                physics_id,
+            )
+
+            return
+
+        if any(
+            item in action_nodes
+            for item in selected_items
+        ):
             return
 
         object_ids = []
@@ -274,36 +457,79 @@ class ProjectDock(QDockWidget):
             )
 
             if object_id:
-                object_ids.append(object_id)
+                object_ids.append(
+                    object_id
+                )
 
             if material_id:
-                material_ids.append(material_id)
+                material_ids.append(
+                    material_id
+                )
 
-        self.selection_requested.emit(object_ids)
-        self.material_selection_requested.emit(material_ids)
+        self.selection_requested.emit(
+            object_ids
+        )
+
+        self.material_selection_requested.emit(
+            material_ids
+        )
 
     def _item_double_clicked(
         self,
         item: QTreeWidgetItem,
         column: int,
     ) -> None:
-        """Handle double-click actions."""
-
         if item is self.mesh_node:
             self.mesh_requested.emit()
+
+        elif item is self.loads_node:
+            self.add_load_requested.emit(
+                ""
+            )
+
+        elif item is self.constraints_node:
+            self.add_constraint_requested.emit(
+                ""
+            )
+
+        else:
+            physics_id = item.data(
+                0,
+                self.PHYSICS_ID_ROLE,
+            )
+
+            physics_type = item.data(
+                0,
+                self.PHYSICS_TYPE_ROLE,
+            )
+
+            if physics_id:
+                if physics_type == "load":
+                    self.edit_load_requested.emit(
+                        physics_id
+                    )
+
+                elif physics_type == "constraint":
+                    self.edit_constraint_requested.emit(
+                        physics_id
+                    )
 
     def _sync_selection(
         self,
         ids: list[str],
     ) -> None:
-        blocked = self.tree.blockSignals(True)
+        blocked = self.tree.blockSignals(
+            True
+        )
 
         self.tree.clearSelection()
 
         for index in range(
             self.geometry_node.childCount()
         ):
-            item = self.geometry_node.child(index)
+            item = self.geometry_node.child(
+                index
+            )
 
             item.setSelected(
                 item.data(
@@ -312,35 +538,29 @@ class ProjectDock(QDockWidget):
                 ) in ids
             )
 
-        self.tree.blockSignals(blocked)
-
-    def _store_order(self) -> None:
-        ordered = [
-            self.geometry_node.child(i).data(
-                0,
-                self.OBJECT_ID_ROLE,
-            )
-            for i in range(
-                self.geometry_node.childCount()
-            )
-        ]
-
-        self.scene.objects.reorder(
-            ordered
+        self.tree.blockSignals(
+            blocked
         )
 
-        self.scene.scene_changed.emit()
+    # =====================================================
+    # CONTEXT MENU
+    # =====================================================
 
     def _context_menu(
         self,
         position,
     ) -> None:
-        item = self.tree.itemAt(position)
+        item = self.tree.itemAt(
+            position
+        )
 
         if not item:
             return
 
-        # Mesh node
+        # -------------------------------------------------
+        # Mesh
+        # -------------------------------------------------
+
         if item is self.mesh_node:
             menu = QMenu(self)
 
@@ -360,7 +580,112 @@ class ProjectDock(QDockWidget):
 
             return
 
-        # Material node
+        # -------------------------------------------------
+        # Physics
+        # -------------------------------------------------
+
+        if item is self.physics_node:
+            menu = QMenu(self)
+
+            loads = menu.addAction(
+                "Add Load"
+            )
+
+            supports = menu.addAction(
+                "Add Support"
+            )
+
+            loads.triggered.connect(
+                lambda: self._show_load_menu(
+                    position
+                )
+            )
+
+            supports.triggered.connect(
+                lambda: self._show_constraint_menu(
+                    position
+                )
+            )
+
+            menu.exec(
+                self.tree.viewport().mapToGlobal(
+                    position
+                )
+            )
+
+            return
+
+        if item is self.loads_node:
+            self._show_load_menu(
+                position
+            )
+            return
+
+        if item is self.constraints_node:
+            self._show_constraint_menu(
+                position
+            )
+            return
+
+        physics_id = item.data(
+            0,
+            self.PHYSICS_ID_ROLE,
+        )
+
+        physics_type = item.data(
+            0,
+            self.PHYSICS_TYPE_ROLE,
+        )
+
+        if physics_id and physics_type:
+            menu = QMenu(self)
+
+            edit = menu.addAction(
+                "Edit"
+            )
+
+            delete = menu.addAction(
+                "Delete"
+            )
+
+            if physics_type == "load":
+                edit.triggered.connect(
+                    lambda: self.edit_load_requested.emit(
+                        physics_id
+                    )
+                )
+
+                delete.triggered.connect(
+                    lambda: self.delete_load_requested.emit(
+                        physics_id
+                    )
+                )
+
+            else:
+                edit.triggered.connect(
+                    lambda: self.edit_constraint_requested.emit(
+                        physics_id
+                    )
+                )
+
+                delete.triggered.connect(
+                    lambda: self.delete_constraint_requested.emit(
+                        physics_id
+                    )
+                )
+
+            menu.exec(
+                self.tree.viewport().mapToGlobal(
+                    position
+                )
+            )
+
+            return
+
+        # -------------------------------------------------
+        # Materials
+        # -------------------------------------------------
+
         material_id = item.data(
             0,
             self.MATERIAL_ID_ROLE,
@@ -407,7 +732,10 @@ class ProjectDock(QDockWidget):
 
             return
 
-        # Geometry node
+        # -------------------------------------------------
+        # Geometry
+        # -------------------------------------------------
+
         object_id = item.data(
             0,
             self.OBJECT_ID_ROLE,
@@ -478,6 +806,121 @@ class ProjectDock(QDockWidget):
                 position
             )
         )
+
+    def _show_load_menu(
+        self,
+        position,
+    ) -> None:
+        menu = QMenu(self)
+
+        force = menu.addAction(
+            "Force"
+        )
+
+        pressure = menu.addAction(
+            "Pressure"
+        )
+
+        gravity = menu.addAction(
+            "Gravity"
+        )
+
+        moment = menu.addAction(
+            "Moment"
+        )
+
+        force.triggered.connect(
+            lambda: self.add_load_requested.emit(
+                "Force"
+            )
+        )
+
+        pressure.triggered.connect(
+            lambda: self.add_load_requested.emit(
+                "Pressure"
+            )
+        )
+
+        gravity.triggered.connect(
+            lambda: self.add_load_requested.emit(
+                "Gravity"
+            )
+        )
+
+        moment.triggered.connect(
+            lambda: self.add_load_requested.emit(
+                "Moment"
+            )
+        )
+
+        menu.exec(
+            self.tree.viewport().mapToGlobal(
+                position
+            )
+        )
+
+    def _show_constraint_menu(
+        self,
+        position,
+    ) -> None:
+        menu = QMenu(self)
+
+        fixed = menu.addAction(
+            "Fixed"
+        )
+
+        pin = menu.addAction(
+            "Pin"
+        )
+
+        roller = menu.addAction(
+            "Roller"
+        )
+
+        fixed.triggered.connect(
+            lambda: self.add_constraint_requested.emit(
+                "Fixed"
+            )
+        )
+
+        pin.triggered.connect(
+            lambda: self.add_constraint_requested.emit(
+                "Pin"
+            )
+        )
+
+        roller.triggered.connect(
+            lambda: self.add_constraint_requested.emit(
+                "Roller"
+            )
+        )
+
+        menu.exec(
+            self.tree.viewport().mapToGlobal(
+                position
+            )
+        )
+
+    # =====================================================
+    # ORDER / OTHER
+    # =====================================================
+
+    def _store_order(self) -> None:
+        ordered = [
+            self.geometry_node.child(i).data(
+                0,
+                self.OBJECT_ID_ROLE,
+            )
+            for i in range(
+                self.geometry_node.childCount()
+            )
+        ]
+
+        self.scene.objects.reorder(
+            ordered
+        )
+
+        self.scene.scene_changed.emit()
 
     def _rename(
         self,

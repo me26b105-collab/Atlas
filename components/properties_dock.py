@@ -1,4 +1,4 @@
-"""Atlas Properties Dock Panel (Right Dock)."""
+"""Atlas Properties Dock Panel."""
 
 from __future__ import annotations
 
@@ -21,9 +21,14 @@ class PropertiesDock(QDockWidget):
     """Display properties for the currently selected Atlas item."""
 
     def __init__(self, parent=None):
-        super().__init__("Properties", parent)
+        super().__init__(
+            "Properties",
+            parent,
+        )
 
-        self.setObjectName("PropertiesDock")
+        self.setObjectName(
+            "PropertiesDock"
+        )
 
         self.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea
@@ -35,51 +40,89 @@ class PropertiesDock(QDockWidget):
     def _setup_ui(self) -> None:
         container = QWidget(self)
 
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout = QVBoxLayout(
+            container
+        )
 
-        self.table = QTableWidget(0, 2)
+        layout.setContentsMargins(
+            4,
+            4,
+            4,
+            4,
+        )
+
+        self.table = QTableWidget(
+            0,
+            2,
+        )
 
         self.table.setHorizontalHeaderLabels(
-            ["Property", "Value"]
+            [
+                "Property",
+                "Value",
+            ]
         )
 
         self.table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
 
-        self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setVisible(
+            False
+        )
 
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
 
-        layout.addWidget(self.table)
+        layout.addWidget(
+            self.table
+        )
 
-        self.setWidget(container)
+        self.setWidget(
+            container
+        )
 
         self.clear_properties()
 
-    # ------------------------------------------------------------------
+    # =====================================================
     # CLEAR
-    # ------------------------------------------------------------------
+    # =====================================================
 
     def clear_properties(self) -> None:
-        self.table.setRowCount(0)
+        self.table.setRowCount(
+            0
+        )
 
-        self._add_section("Geometry")
-        self._add_property("Status", "No Selection")
+        self._add_section(
+            "Geometry"
+        )
 
-    # ------------------------------------------------------------------
+        self._add_property(
+            "Status",
+            "No Selection",
+        )
+
+    # =====================================================
     # MATERIAL
-    # ------------------------------------------------------------------
+    # =====================================================
 
-    def set_material(self, material) -> None:
-        self.table.setRowCount(0)
+    def set_material(
+        self,
+        material,
+    ) -> None:
+        self.table.setRowCount(
+            0
+        )
 
-        self._add_section("Material")
+        self._add_section(
+            "Material"
+        )
 
-        self._add_property("Name", material.name)
+        self._add_property(
+            "Name",
+            material.name,
+        )
 
         self._add_property(
             "Density",
@@ -149,21 +192,35 @@ class PropertiesDock(QDockWidget):
             ),
         )
 
-        self._add_section("Database")
+        self._add_section(
+            "Database"
+        )
 
-        self._add_property("UUID", material.uuid)
+        self._add_property(
+            "UUID",
+            material.uuid,
+        )
 
         self._add_property(
             "Status",
-            "Modified" if material.is_dirty else "Saved",
+            (
+                "Modified"
+                if material.is_dirty
+                else "Saved"
+            ),
         )
 
-    # ------------------------------------------------------------------
+    # =====================================================
     # GEOMETRY
-    # ------------------------------------------------------------------
+    # =====================================================
 
-    def set_scene_object(self, obj) -> None:
-        self.table.setRowCount(0)
+    def set_scene_object(
+        self,
+        obj,
+    ) -> None:
+        self.table.setRowCount(
+            0
+        )
 
         mesh = obj.mesh
         bounds = obj.bounds
@@ -174,7 +231,9 @@ class PropertiesDock(QDockWidget):
             bounds[5] - bounds[4],
         )
 
-        self._add_section("Object")
+        self._add_section(
+            "Object"
+        )
 
         self._add_property(
             "Name",
@@ -192,11 +251,18 @@ class PropertiesDock(QDockWidget):
         )
 
         try:
-            size = Path(obj.file_path).stat().st_size / 1024
+            size = (
+                Path(
+                    obj.file_path
+                ).stat().st_size
+                / 1024
+            )
+
             self._add_property(
                 "File Size",
                 f"{size:.1f} KB",
             )
+
         except OSError:
             self._add_property(
                 "File Size",
@@ -205,7 +271,9 @@ class PropertiesDock(QDockWidget):
 
         self._add_property(
             "Geometry Type",
-            Path(obj.file_path)
+            Path(
+                obj.file_path
+            )
             .suffix
             .upper()
             .lstrip("."),
@@ -223,9 +291,13 @@ class PropertiesDock(QDockWidget):
 
         self._add_property(
             "Bounds",
-            "X {:.2f}–{:.2f}\n"
-            "Y {:.2f}–{:.2f}\n"
-            "Z {:.2f}–{:.2f}".format(*bounds),
+            (
+                "X {:.2f}–{:.2f}\n"
+                "Y {:.2f}–{:.2f}\n"
+                "Z {:.2f}–{:.2f}"
+            ).format(
+                *bounds
+            ),
         )
 
         self._add_property(
@@ -262,14 +334,20 @@ class PropertiesDock(QDockWidget):
 
         self._add_property(
             "Estimated Memory",
-            self._memory_estimate(mesh),
+            self._memory_estimate(
+                mesh
+            ),
         )
 
-        self._add_section("Rendering")
+        self._add_section(
+            "Rendering"
+        )
 
         self._add_property(
             "Visible",
-            "Yes" if obj.visible else "No",
+            "Yes"
+            if obj.visible
+            else "No",
         )
 
         self._add_property(
@@ -284,17 +362,23 @@ class PropertiesDock(QDockWidget):
 
         self._add_property(
             "Wireframe",
-            "On" if obj.wireframe else "Off",
+            "On"
+            if obj.wireframe
+            else "Off",
         )
 
         self._add_property(
             "Rendering Mode",
-            "Wireframe"
-            if obj.wireframe
-            else "Surface",
+            (
+                "Wireframe"
+                if obj.wireframe
+                else "Surface"
+            ),
         )
 
-        self._add_section("Lifecycle")
+        self._add_section(
+            "Lifecycle"
+        )
 
         self._add_property(
             "Created",
@@ -306,19 +390,160 @@ class PropertiesDock(QDockWidget):
             obj.last_modified,
         )
 
-    # ------------------------------------------------------------------
+    # =====================================================
+    # PHYSICS
+    # =====================================================
+
+    def set_physics_load(
+        self,
+        load,
+    ) -> None:
+        self.table.setRowCount(
+            0
+        )
+
+        self._add_section(
+            "Load"
+        )
+
+        self._add_property(
+            "Name",
+            load.name,
+        )
+
+        self._add_property(
+            "Type",
+            load.load_type,
+        )
+
+        units = {
+            "Force": "N",
+            "Pressure": "Pa",
+            "Gravity": "m/s²",
+            "Moment": "N·m",
+        }
+
+        self._add_property(
+            "Magnitude",
+            f"{load.magnitude:g} "
+            f"{units.get(load.load_type, '')}",
+        )
+
+        self._add_property(
+            "Direction",
+            (
+                f"{load.direction_x:g}, "
+                f"{load.direction_y:g}, "
+                f"{load.direction_z:g}"
+            ),
+        )
+
+        self._add_property(
+            "Location",
+            (
+                f"{load.location_x:g}, "
+                f"{load.location_y:g}, "
+                f"{load.location_z:g}"
+            ),
+        )
+
+        self._add_property(
+            "Geometry UUID",
+            load.object_id or "None",
+        )
+
+        self._add_section(
+            "Database"
+        )
+
+        self._add_property(
+            "UUID",
+            load.uuid,
+        )
+
+        self._add_property(
+            "Enabled",
+            "Yes"
+            if load.enabled
+            else "No",
+        )
+
+    def set_physics_constraint(
+        self,
+        constraint,
+    ) -> None:
+        self.table.setRowCount(
+            0
+        )
+
+        self._add_section(
+            "Support"
+        )
+
+        self._add_property(
+            "Name",
+            constraint.name,
+        )
+
+        self._add_property(
+            "Type",
+            constraint.constraint_type,
+        )
+
+        self._add_property(
+            "Location",
+            (
+                f"{constraint.location_x:g}, "
+                f"{constraint.location_y:g}, "
+                f"{constraint.location_z:g}"
+            ),
+        )
+
+        self._add_property(
+            "Direction",
+            (
+                f"{constraint.direction_x:g}, "
+                f"{constraint.direction_y:g}, "
+                f"{constraint.direction_z:g}"
+            ),
+        )
+
+        self._add_property(
+            "Geometry UUID",
+            constraint.object_id or "None",
+        )
+
+        self._add_section(
+            "Database"
+        )
+
+        self._add_property(
+            "UUID",
+            constraint.uuid,
+        )
+
+        self._add_property(
+            "Enabled",
+            "Yes"
+            if constraint.enabled
+            else "No",
+        )
+
+    # =====================================================
     # MESH
-    # ------------------------------------------------------------------
+    # =====================================================
 
     def set_mesh_result(
         self,
         result,
     ) -> None:
-        """Display generated mesh statistics and quality."""
+        self.table.setRowCount(
+            0
+        )
 
-        self.table.setRowCount(0)
-
-        self._add_section("Mesh")
+        self._add_section(
+            "Mesh"
+        )
 
         self._add_property(
             "Type",
@@ -337,7 +562,9 @@ class PropertiesDock(QDockWidget):
 
         stats = result.statistics
 
-        self._add_section("Mesh Statistics")
+        self._add_section(
+            "Mesh Statistics"
+        )
 
         self._add_property(
             "Points",
@@ -361,13 +588,16 @@ class PropertiesDock(QDockWidget):
 
         quality = result.quality
 
-        self._add_section("Mesh Quality")
+        self._add_section(
+            "Mesh Quality"
+        )
 
         if quality["minimum"] is None:
             self._add_property(
                 "Quality",
                 "Not available",
             )
+
         else:
             self._add_property(
                 "Minimum",
@@ -389,30 +619,30 @@ class PropertiesDock(QDockWidget):
                 f"{quality['poor_cells']:,}",
             )
 
-    # ------------------------------------------------------------------
+    # =====================================================
     # HELPERS
-    # ------------------------------------------------------------------
+    # =====================================================
 
     def _format_value(
         self,
         value,
-        unit: str,
+        units: str,
     ) -> str:
         if value is None:
-            return "Blank"
+            return ""
 
-        return f"{value:g} {unit}"
+        return f"{value:g} {units}"
 
     def _format_scaled_value(
         self,
         value,
         scale: float,
-        unit: str,
+        units: str,
     ) -> str:
         if value is None:
-            return "Blank"
+            return ""
 
-        return f"{value / scale:g} {unit}"
+        return f"{value / scale:g} {units}"
 
     def _format_decimal(
         self,
@@ -420,7 +650,7 @@ class PropertiesDock(QDockWidget):
         decimals: int,
     ) -> str:
         if value is None:
-            return "Blank"
+            return ""
 
         return f"{value:.{decimals}f}"
 
@@ -457,7 +687,9 @@ class PropertiesDock(QDockWidget):
     ) -> None:
         row = self.table.rowCount()
 
-        self.table.insertRow(row)
+        self.table.insertRow(
+            row
+        )
 
         item = QTableWidgetItem(
             title.upper()
@@ -491,7 +723,9 @@ class PropertiesDock(QDockWidget):
     ) -> None:
         row = self.table.rowCount()
 
-        self.table.insertRow(row)
+        self.table.insertRow(
+            row
+        )
 
         self.table.setItem(
             row,
@@ -502,5 +736,7 @@ class PropertiesDock(QDockWidget):
         self.table.setItem(
             row,
             1,
-            QTableWidgetItem(str(value)),
+            QTableWidgetItem(
+                str(value)
+            ),
         )
