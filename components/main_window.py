@@ -1,9 +1,11 @@
-"""Atlas workspace coordinator. Domain behavior lives in scene/services."""
+"""Atlas workspace coordinator."""
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
+
+import pyvista as pv
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -15,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from components.menu_bar import AtlasMenuBar
+from components.mesh_dock import MeshDock
 from components.project_dock import ProjectDock
 from components.properties_dock import PropertiesDock
 from components.status_bar import AtlasStatusBar
@@ -23,6 +26,7 @@ from components.viewport import AtlasViewport
 from components.material_editor import MaterialEditorDialog
 
 from geometry.geometry_loader import GeometryLoader
+from geometry.mesh_manager import MeshManager
 from geometry.project_manager import ProjectManager
 from geometry.scene import SceneManager
 
@@ -38,13 +42,18 @@ class AtlasMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Atlas v0.0.7")
+        self.setWindowTitle("Atlas v0.0.8")
         self.resize(1400, 900)
 
         self.geometry_loader = GeometryLoader()
         self.project_manager = ProjectManager()
         self.scene = SceneManager()
+
         self.material_manager = MaterialManager()
+
+        # NEW v0.0.8
+        self.mesh_manager = MeshManager()
+        self.mesh_actor = None
 
         self.current_geometry_path: str | None = None
         self.current_project_path: str | None = None
@@ -63,6 +72,10 @@ class AtlasMainWindow(QMainWindow):
             self._autosave
         )
         self.autosave_timer.start(180_000)
+
+    # =====================================================
+    # Setup
+    # =====================================================
 
     def _configure_logging(self) -> None:
         log_dir = Path.cwd() / "logs"
@@ -84,10 +97,14 @@ class AtlasMainWindow(QMainWindow):
             self,
         )
 
-        self.setCentralWidget(self.viewport)
+        self.setCentralWidget(
+            self.viewport
+        )
 
         self.menu_bar = AtlasMenuBar(self)
-        self.setMenuBar(self.menu_bar)
+        self.setMenuBar(
+            self.menu_bar
+        )
 
         self.tool_bar = AtlasToolBar(self)
 
@@ -106,21 +123,42 @@ class AtlasMainWindow(QMainWindow):
             self.project_dock,
         )
 
-        self.properties_dock = PropertiesDock(self)
+        self.properties_dock = PropertiesDock(
+            self
+        )
 
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea,
             self.properties_dock,
         )
 
-        self.status_bar = AtlasStatusBar(self)
-        self.setStatusBar(self.status_bar)
+        # NEW v0.0.8
+        self.mesh_dock = MeshDock(self)
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea,
+            self.mesh_dock,
+        )
+
+        self.mesh_dock.hide()
+
+        self.status_bar = AtlasStatusBar(
+            self
+        )
+
+        self.setStatusBar(
+            self.status_bar
+        )
 
     def _connect_signals(self) -> None:
         m = self.menu_bar
         t = self.tool_bar
         v = self.viewport
         d = self.project_dock
+
+        # -------------------------------------------------
+        # Menu
+        # -------------------------------------------------
 
         m.new_project_requested.connect(
             self.new_project
@@ -170,6 +208,10 @@ class AtlasMainWindow(QMainWindow):
             self.load_geometry_file
         )
 
+        # -------------------------------------------------
+        # Toolbar
+        # -------------------------------------------------
+
         t.new_project_requested.connect(
             self.new_project
         )
@@ -198,6 +240,10 @@ class AtlasMainWindow(QMainWindow):
             self.save_screenshot
         )
 
+        # -------------------------------------------------
+        # Viewport
+        # -------------------------------------------------
+
         v.geometry_dropped.connect(
             self.load_geometry_file
         )
@@ -222,7 +268,10 @@ class AtlasMainWindow(QMainWindow):
             self._viewport_command
         )
 
-        # Geometry project tree.
+        # -------------------------------------------------
+        # Geometry project tree
+        # -------------------------------------------------
+
         d.selection_requested.connect(
             self.scene.select
         )
@@ -248,7 +297,10 @@ class AtlasMainWindow(QMainWindow):
             self.scene.select([object_id])
         )
 
-        # Material project tree.
+        # -------------------------------------------------
+        # Materials
+        # -------------------------------------------------
+
         d.material_selection_requested.connect(
             self._material_selection_changed
         )
@@ -265,6 +317,30 @@ class AtlasMainWindow(QMainWindow):
             self._save_material
         )
 
+        # -------------------------------------------------
+        # NEW v0.0.8 Mesh
+        # -------------------------------------------------
+
+        d.mesh_requested.connect(
+            self.show_mesh_dock
+        )
+
+        self.mesh_dock.surface_mesh_requested.connect(
+            self.generate_surface_mesh
+        )
+
+        self.mesh_dock.volume_mesh_requested.connect(
+            self.generate_volume_mesh
+        )
+
+        self.mesh_dock.clear_mesh_requested.connect(
+            self.clear_generated_mesh
+        )
+
+        # -------------------------------------------------
+        # Scene
+        # -------------------------------------------------
+
         self.scene.selection.selection_changed.connect(
             self._selection_changed
         )
@@ -279,32 +355,248 @@ class AtlasMainWindow(QMainWindow):
             activated=self.delete_selected,
         )
 
+    # =====================================================
+    # Mesh
+    # =====================================================
+
+    def show_mesh_dock(self) -> None:
+        """Show the mesh controls."""
+
+        if not self.scene.selected_objects():
+            QMessageBox.information(
+                self,
+                "Mesh",
+                "Select a geometry object first.",
+            )
+            return
+
+        self.mesh_dock.show()
+        self.mesh_dock.raise_()
+
+        self.status_bar.set_message(
+            "Mesh controls opened."
+        )
+
+    def _selected_geometry_mesh(self):
+        selected = self.scene.selected_objects()
+
+        if not selected:
+            raise ValueError(
+                "Select a geometry object first."
+            )
+
+        return selected[0].mesh
+
+    def generate_surface_mesh(
+        self,
+        element_size: float,
+        refinement: int,
+    ) -> None:
+        """Generate and display a surface mesh."""
+
+        try:
+            geometry = self._selected_geometry_mesh()
+
+            mesh = (
+                self.mesh_manager
+                .generate_surface_mesh(
+                    geometry,
+                    refinement,
+                )
+            )
+
+            self._display_generated_mesh(
+                mesh,
+                wireframe=True,
+            )
+
+            stats = (
+                self.mesh_manager
+                .surface_statistics
+            )
+
+            self.mesh_dock.set_statistics(
+                stats.points,
+                stats.cells,
+                stats.surface_cells,
+                stats.volume_cells,
+                stats.memory_mb,
+            )
+
+            quality = (
+                self.mesh_manager
+                .surface_quality()
+            )
+
+            self.mesh_dock.set_quality(
+                quality.get("minimum_area"),
+                quality.get("average_area"),
+                quality.get("maximum_area"),
+            )
+
+            self.status_bar.set_message(
+                "Surface mesh generated."
+            )
+
+        except Exception as error:
+            logging.exception(
+                "Surface mesh generation failed"
+            )
+
+            QMessageBox.warning(
+                self,
+                "Surface Mesh",
+                str(error),
+            )
+
+    def generate_volume_mesh(
+        self,
+        element_size: float,
+        refinement: int,
+    ) -> None:
+        """Generate and display a volume mesh."""
+
+        try:
+            geometry = self._selected_geometry_mesh()
+
+            mesh = (
+                self.mesh_manager
+                .generate_volume_mesh(
+                    geometry,
+                    refinement,
+                )
+            )
+
+            self._display_generated_mesh(
+                mesh,
+                wireframe=True,
+            )
+
+            stats = (
+                self.mesh_manager
+                .volume_statistics
+            )
+
+            self.mesh_dock.set_statistics(
+                stats.points,
+                stats.cells,
+                stats.surface_cells,
+                stats.volume_cells,
+                stats.memory_mb,
+            )
+
+            quality = (
+                self.mesh_manager
+                .volume_quality()
+            )
+
+            self.mesh_dock.set_quality(
+                quality.get("minimum_volume"),
+                quality.get("average_volume"),
+                quality.get("maximum_volume"),
+            )
+
+            self.status_bar.set_message(
+                "Volume mesh generated."
+            )
+
+        except Exception as error:
+            logging.exception(
+                "Volume mesh generation failed"
+            )
+
+            QMessageBox.warning(
+                self,
+                "Volume Mesh",
+                str(error),
+            )
+
+    def _display_generated_mesh(
+        self,
+        mesh,
+        wireframe: bool = True,
+    ) -> None:
+        """Display a generated mesh in the viewport."""
+
+        self._remove_mesh_actor()
+
+        self.mesh_actor = (
+            self.viewport.plotter.add_mesh(
+                mesh,
+                color="#7DD3FC",
+                show_edges=wireframe,
+                line_width=1.0,
+                opacity=0.95,
+            )
+        )
+
+        self.viewport.plotter.reset_camera()
+        self.viewport.plotter.render()
+
+    def _remove_mesh_actor(self) -> None:
+        if self.mesh_actor is not None:
+            try:
+                self.viewport.plotter.remove_actor(
+                    self.mesh_actor,
+                    render=False,
+                )
+            except Exception:
+                pass
+
+            self.mesh_actor = None
+
+    def clear_generated_mesh(self) -> None:
+        """Remove generated mesh visualization."""
+
+        self._remove_mesh_actor()
+        self.mesh_manager.clear()
+        self.mesh_dock.clear_statistics()
+
+        self.viewport.plotter.render()
+
+        self.status_bar.set_message(
+            "Generated mesh cleared."
+        )
+
+    # =====================================================
+    # Materials
+    # =====================================================
+
     def _material_selection_changed(
         self,
         material_ids: list[str],
     ) -> None:
         if not material_ids:
-            self.material_manager.select(None)
+            self.material_manager.select(
+                None
+            )
 
             if not self.scene.selected_objects():
                 self.properties_dock.clear_properties()
 
             return
 
-        # Selecting a material clears geometry selection.
         self.scene.select([])
 
         material_id = material_ids[0]
 
-        self.material_manager.select(material_id)
+        self.material_manager.select(
+            material_id
+        )
 
-        material = self.material_manager.get_selected()
+        material = (
+            self.material_manager
+            .get_selected()
+        )
 
         if material:
-            self.properties_dock.set_material(material)
+            self.properties_dock.set_material(
+                material
+            )
 
             self.status_bar.set_message(
-                f"Selected Material: {material.name}"
+                f"Selected Material: "
+                f"{material.name}"
             )
 
     def _edit_material(
@@ -409,7 +701,8 @@ class AtlasMainWindow(QMainWindow):
         )
 
         material = (
-            self.material_manager.get_selected()
+            self.material_manager
+            .get_selected()
         )
 
         if material:
@@ -417,8 +710,14 @@ class AtlasMainWindow(QMainWindow):
                 material
             )
 
+    # =====================================================
+    # Project / geometry
+    # =====================================================
+
     def new_project(self) -> None:
-        """Clear all geometry without affecting the material library."""
+        """Clear all geometry without affecting materials."""
+
+        self.clear_generated_mesh()
 
         self.scene.clear()
         self.viewport.rebuild_scene()
@@ -429,15 +728,19 @@ class AtlasMainWindow(QMainWindow):
 
         self.properties_dock.clear_properties()
 
-        self.material_manager.select(None)
+        self.material_manager.select(
+            None
+        )
 
         self.current_geometry_path = None
         self.current_project_path = None
 
         self.status_bar.clear_geometry()
+
         self.status_bar.set_project(
             "Untitled Project"
         )
+
         self.status_bar.set_message(
             "New Project"
         )
@@ -451,7 +754,9 @@ class AtlasMainWindow(QMainWindow):
         )
 
         if filename:
-            self.load_geometry_file(filename)
+            self.load_geometry_file(
+                filename
+            )
 
     def load_geometry_file(
         self,
@@ -459,8 +764,6 @@ class AtlasMainWindow(QMainWindow):
         metadata: dict | None = None,
     ) -> bool:
         try:
-            # Atlas v0.0.6 behaviour:
-            # importing geometry replaces the current body.
             if len(self.scene.objects):
                 self.new_project()
 
@@ -487,7 +790,8 @@ class AtlasMainWindow(QMainWindow):
             self._refresh_recent_files()
 
             self.status_bar.set_message(
-                f"Imported: {obj.display_name}"
+                f"Imported: "
+                f"{obj.display_name}"
             )
 
             return True
@@ -507,7 +811,8 @@ class AtlasMainWindow(QMainWindow):
 
         except Exception as error:
             self.status_bar.set_error(
-                f"Could not read geometry: {error}"
+                f"Could not read geometry: "
+                f"{error}"
             )
 
             logging.exception(
@@ -516,15 +821,22 @@ class AtlasMainWindow(QMainWindow):
 
         return False
 
+    # =====================================================
+    # Selection
+    # =====================================================
+
     def _selection_changed(
         self,
         ids: list[str],
     ) -> None:
-        selected = self.scene.selected_objects()
+        selected = (
+            self.scene.selected_objects()
+        )
 
-        # Geometry selection automatically clears material selection.
         if selected:
-            self.material_manager.select(None)
+            self.material_manager.select(
+                None
+            )
 
         if len(selected) == 1:
             self.properties_dock.set_scene_object(
@@ -539,7 +851,9 @@ class AtlasMainWindow(QMainWindow):
 
     def _scene_changed(self) -> None:
         stats = self.scene.statistics()
-        selected = self.scene.selected_objects()
+        selected = (
+            self.scene.selected_objects()
+        )
 
         if len(selected) == 1:
             name = selected[0].display_name
@@ -558,7 +872,9 @@ class AtlasMainWindow(QMainWindow):
         object_id: str,
         name: str | None = None,
     ) -> None:
-        obj = self.scene.objects.get(object_id)
+        obj = self.scene.objects.get(
+            object_id
+        )
 
         if not obj:
             return
@@ -618,13 +934,23 @@ class AtlasMainWindow(QMainWindow):
                 object_id
             )
 
+    # =====================================================
+    # Recent files / screenshots
+    # =====================================================
+
     def _refresh_recent_files(self) -> None:
         files = (
-            self.project_manager.recent_files()
+            self.project_manager
+            .recent_files()
         )
 
-        self.menu_bar.set_recent_files(files)
-        self.viewport.set_recent_files(files)
+        self.menu_bar.set_recent_files(
+            files
+        )
+
+        self.viewport.set_recent_files(
+            files
+        )
 
     def save_screenshot(self) -> None:
         filename, _ = QFileDialog.getSaveFileName(
@@ -648,10 +974,14 @@ class AtlasMainWindow(QMainWindow):
                 f"{Path(filename).name}"
             )
 
+    # =====================================================
+    # Project persistence
+    # =====================================================
+
     def _project_data(self) -> dict:
         return {
             "format": "Atlas Project",
-            "version": "0.0.7",
+            "version": "0.0.8",
             "objects": [
                 obj.to_project_dict()
                 for obj in self.scene.objects
@@ -719,7 +1049,8 @@ class AtlasMainWindow(QMainWindow):
 
         except OSError as error:
             self.status_bar.set_error(
-                f"Could not save project: {error}"
+                f"Could not save project: "
+                f"{error}"
             )
 
     def open_project(self) -> None:
@@ -731,20 +1062,25 @@ class AtlasMainWindow(QMainWindow):
         )
 
         if filename:
-            self._load_project(filename)
+            self._load_project(
+                filename
+            )
 
     def _load_project(
         self,
         filename: str,
     ) -> bool:
         try:
-            data = self.project_manager.open_project(
-                filename
+            data = (
+                self.project_manager
+                .open_project(filename)
             )
 
             self.new_project()
 
-            objects = data.get("objects")
+            objects = data.get(
+                "objects"
+            )
 
             if (
                 objects is None
@@ -778,7 +1114,10 @@ class AtlasMainWindow(QMainWindow):
                 )
 
             self.scene.select(
-                data.get("selection", [])
+                data.get(
+                    "selection",
+                    [],
+                )
             )
 
             self.current_project_path = filename
@@ -820,6 +1159,10 @@ class AtlasMainWindow(QMainWindow):
             )
 
         return False
+
+    # =====================================================
+    # Autosave
+    # =====================================================
 
     def _autosave(self) -> None:
         if len(self.scene.objects):

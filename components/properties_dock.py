@@ -60,15 +60,21 @@ class PropertiesDock(QDockWidget):
 
         self.clear_properties()
 
+    # ------------------------------------------------------------------
+    # CLEAR
+    # ------------------------------------------------------------------
+
     def clear_properties(self) -> None:
         self.table.setRowCount(0)
 
         self._add_section("Geometry")
         self._add_property("Status", "No Selection")
 
-    def set_material(self, material) -> None:
-        """Display the selected material's engineering properties."""
+    # ------------------------------------------------------------------
+    # MATERIAL
+    # ------------------------------------------------------------------
 
+    def set_material(self, material) -> None:
         self.table.setRowCount(0)
 
         self._add_section("Material")
@@ -145,19 +151,18 @@ class PropertiesDock(QDockWidget):
 
         self._add_section("Database")
 
-        self._add_property(
-            "UUID",
-            material.uuid,
-        )
+        self._add_property("UUID", material.uuid)
 
         self._add_property(
             "Status",
             "Modified" if material.is_dirty else "Saved",
         )
 
-    def set_scene_object(self, obj) -> None:
-        """Display identity, geometry and rendering information."""
+    # ------------------------------------------------------------------
+    # GEOMETRY
+    # ------------------------------------------------------------------
 
+    def set_scene_object(self, obj) -> None:
         self.table.setRowCount(0)
 
         mesh = obj.mesh
@@ -171,18 +176,27 @@ class PropertiesDock(QDockWidget):
 
         self._add_section("Object")
 
-        self._add_property("Name", obj.display_name)
-        self._add_property("UUID", obj.uuid)
-        self._add_property("File", obj.original_filename)
+        self._add_property(
+            "Name",
+            obj.display_name,
+        )
+
+        self._add_property(
+            "UUID",
+            obj.uuid,
+        )
+
+        self._add_property(
+            "File",
+            obj.original_filename,
+        )
 
         try:
             size = Path(obj.file_path).stat().st_size / 1024
-
             self._add_property(
                 "File Size",
                 f"{size:.1f} KB",
             )
-
         except OSError:
             self._add_property(
                 "File Size",
@@ -292,26 +306,113 @@ class PropertiesDock(QDockWidget):
             obj.last_modified,
         )
 
+    # ------------------------------------------------------------------
+    # MESH
+    # ------------------------------------------------------------------
+
+    def set_mesh_result(
+        self,
+        result,
+    ) -> None:
+        """Display generated mesh statistics and quality."""
+
+        self.table.setRowCount(0)
+
+        self._add_section("Mesh")
+
+        self._add_property(
+            "Type",
+            result.mesh_type,
+        )
+
+        self._add_property(
+            "Target Size",
+            f"{result.target_size:g}",
+        )
+
+        self._add_property(
+            "Refinement",
+            str(result.refinement),
+        )
+
+        stats = result.statistics
+
+        self._add_section("Mesh Statistics")
+
+        self._add_property(
+            "Points",
+            f"{stats['points']:,}",
+        )
+
+        self._add_property(
+            "Cells",
+            f"{stats['cells']:,}",
+        )
+
+        self._add_property(
+            "Area",
+            f"{stats['area']:,.4f}",
+        )
+
+        self._add_property(
+            "Volume",
+            f"{stats['volume']:,.4f}",
+        )
+
+        quality = result.quality
+
+        self._add_section("Mesh Quality")
+
+        if quality["minimum"] is None:
+            self._add_property(
+                "Quality",
+                "Not available",
+            )
+        else:
+            self._add_property(
+                "Minimum",
+                f"{quality['minimum']:.4f}",
+            )
+
+            self._add_property(
+                "Average",
+                f"{quality['average']:.4f}",
+            )
+
+            self._add_property(
+                "Maximum",
+                f"{quality['maximum']:.4f}",
+            )
+
+            self._add_property(
+                "Poor Cells",
+                f"{quality['poor_cells']:,}",
+            )
+
+    # ------------------------------------------------------------------
+    # HELPERS
+    # ------------------------------------------------------------------
+
     def _format_value(
         self,
         value,
-        units: str,
+        unit: str,
     ) -> str:
         if value is None:
-            return ""
+            return "Blank"
 
-        return f"{value:g} {units}"
+        return f"{value:g} {unit}"
 
     def _format_scaled_value(
         self,
         value,
         scale: float,
-        units: str,
+        unit: str,
     ) -> str:
         if value is None:
-            return ""
+            return "Blank"
 
-        return f"{value / scale:g} {units}"
+        return f"{value / scale:g} {unit}"
 
     def _format_decimal(
         self,
@@ -319,7 +420,7 @@ class PropertiesDock(QDockWidget):
         decimals: int,
     ) -> str:
         if value is None:
-            return ""
+            return "Blank"
 
         return f"{value:.{decimals}f}"
 
@@ -337,7 +438,10 @@ class PropertiesDock(QDockWidget):
         except Exception:
             return "Not available"
 
-    def _memory_estimate(self, mesh) -> str:
+    def _memory_estimate(
+        self,
+        mesh,
+    ) -> str:
         byte_count = (
             mesh.n_points * 3 * 8
             + mesh.n_cells * 16
@@ -347,14 +451,21 @@ class PropertiesDock(QDockWidget):
             f"{byte_count / (1024 * 1024):.2f} MB"
         )
 
-    def _add_section(self, title: str) -> None:
+    def _add_section(
+        self,
+        title: str,
+    ) -> None:
         row = self.table.rowCount()
 
         self.table.insertRow(row)
 
-        item = QTableWidgetItem(title.upper())
+        item = QTableWidgetItem(
+            title.upper()
+        )
 
-        item.setFlags(Qt.ItemFlag.NoItemFlags)
+        item.setFlags(
+            Qt.ItemFlag.NoItemFlags
+        )
 
         item.setForeground(
             QColor("#8D99A8")
@@ -391,5 +502,5 @@ class PropertiesDock(QDockWidget):
         self.table.setItem(
             row,
             1,
-            QTableWidgetItem(value),
+            QTableWidgetItem(str(value)),
         )

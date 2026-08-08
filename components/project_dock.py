@@ -32,6 +32,9 @@ class ProjectDock(QDockWidget):
     reset_material_requested = Signal(str)
     save_material_requested = Signal()
 
+    # NEW: v0.0.8
+    mesh_requested = Signal()
+
     OBJECT_ID_ROLE = Qt.ItemDataRole.UserRole
     MATERIAL_ID_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -53,10 +56,14 @@ class ProjectDock(QDockWidget):
 
         self._setup_ui()
 
-        scene.scene_changed.connect(self.refresh)
+        scene.scene_changed.connect(
+            self.refresh
+        )
+
         scene.selection.selection_changed.connect(
             self._sync_selection
         )
+
         scene.object_changed.connect(
             lambda _: self.refresh()
         )
@@ -85,6 +92,10 @@ class ProjectDock(QDockWidget):
 
         self.tree.itemSelectionChanged.connect(
             self._tree_selection_changed
+        )
+
+        self.tree.itemDoubleClicked.connect(
+            self._item_double_clicked
         )
 
         self.tree.customContextMenuRequested.connect(
@@ -159,7 +170,10 @@ class ProjectDock(QDockWidget):
         self.geometry_node.setExpanded(True)
         self.materials_node.setExpanded(True)
 
-    def refresh_materials(self, materials: list) -> None:
+    def refresh_materials(
+        self,
+        materials: list,
+    ) -> None:
         """Populate the Materials library."""
 
         self.materials_node.takeChildren()
@@ -223,10 +237,32 @@ class ProjectDock(QDockWidget):
         )
 
     def _tree_selection_changed(self) -> None:
+        """Handle tree selection without clearing geometry selection for action nodes."""
+
+        selected_items = self.tree.selectedItems()
+
+        # Mesh, Materials, Physics, Results, Screenshots, etc.
+        # are action/category nodes and should not change the
+        # currently selected geometry objects.
+        action_nodes = {
+            self.root_item,
+            self.geometry_node,
+            self.materials_node,
+            self.mesh_node,
+            self.physics_node,
+            self.results_node,
+            self.screenshots_node,
+        }
+
+        # If the user clicked an action/category node, preserve
+        # the existing scene selection.
+        if any(item in action_nodes for item in selected_items):
+            return
+
         object_ids = []
         material_ids = []
 
-        for item in self.tree.selectedItems():
+        for item in selected_items:
             object_id = item.data(
                 0,
                 self.OBJECT_ID_ROLE,
@@ -244,9 +280,17 @@ class ProjectDock(QDockWidget):
                 material_ids.append(material_id)
 
         self.selection_requested.emit(object_ids)
-        self.material_selection_requested.emit(
-            material_ids
-        )
+        self.material_selection_requested.emit(material_ids)
+
+    def _item_double_clicked(
+        self,
+        item: QTreeWidgetItem,
+        column: int,
+    ) -> None:
+        """Handle double-click actions."""
+
+        if item is self.mesh_node:
+            self.mesh_requested.emit()
 
     def _sync_selection(
         self,
@@ -281,15 +325,42 @@ class ProjectDock(QDockWidget):
             )
         ]
 
-        self.scene.objects.reorder(ordered)
+        self.scene.objects.reorder(
+            ordered
+        )
+
         self.scene.scene_changed.emit()
 
-    def _context_menu(self, position) -> None:
+    def _context_menu(
+        self,
+        position,
+    ) -> None:
         item = self.tree.itemAt(position)
 
         if not item:
             return
 
+        # Mesh node
+        if item is self.mesh_node:
+            menu = QMenu(self)
+
+            action = menu.addAction(
+                "Open Mesh Controls"
+            )
+
+            action.triggered.connect(
+                self.mesh_requested.emit
+            )
+
+            menu.exec(
+                self.tree.viewport().mapToGlobal(
+                    position
+                )
+            )
+
+            return
+
+        # Material node
         material_id = item.data(
             0,
             self.MATERIAL_ID_ROLE,
@@ -336,6 +407,7 @@ class ProjectDock(QDockWidget):
 
             return
 
+        # Geometry node
         object_id = item.data(
             0,
             self.OBJECT_ID_ROLE,
@@ -344,14 +416,19 @@ class ProjectDock(QDockWidget):
         if not object_id:
             return
 
-        obj = self.scene.objects.get(object_id)
+        obj = self.scene.objects.get(
+            object_id
+        )
 
         if not obj:
             return
 
         menu = QMenu(self)
 
-        rename = menu.addAction("Rename")
+        rename = menu.addAction(
+            "Rename"
+        )
+
         rename.triggered.connect(
             lambda: self._rename(
                 object_id,
@@ -359,7 +436,10 @@ class ProjectDock(QDockWidget):
             )
         )
 
-        delete = menu.addAction("Delete")
+        delete = menu.addAction(
+            "Delete"
+        )
+
         delete.triggered.connect(
             lambda: self.delete_requested.emit(
                 [object_id]
@@ -367,7 +447,9 @@ class ProjectDock(QDockWidget):
         )
 
         visibility = menu.addAction(
-            "Hide" if obj.visible else "Show"
+            "Hide"
+            if obj.visible
+            else "Show"
         )
 
         visibility.triggered.connect(
@@ -443,4 +525,6 @@ class ProjectDock(QDockWidget):
             [filename],
         )
 
-        self.screenshots_node.setExpanded(True)
+        self.screenshots_node.setExpanded(
+            True
+        )

@@ -1,49 +1,31 @@
 {
   "format": "Atlas Project",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "objects": [
     {
-      "uuid": "f325f676-2c96-45e3-a67e-db8482e694f4",
+      "uuid": "5b9a12f3-2887-4498-b0f8-7d769ed36e72",
       "display_name": "cube",
       "original_filename": "cube.stl",
-      "file_path": "C:\\Users\\vaibh\\OneDrive\\Desktop\\Project\\Ver 0.0.4\\stl files\\cube.stl",
-      "visible": false,
-      "opacity": 1.0,
-      "color": "#D8DDE6",
-      "edge_visibility": true,
-      "wireframe": false,
-      "render_mode": "surface",
-      "transform": {},
-      "material": {},
-      "mesh": {},
-      "physics": {},
-      "creation_time": "2026-08-07T13:42:22.124851+00:00",
-      "last_modified": "2026-08-07T13:42:42.079502+00:00"
-    },
-    {
-      "uuid": "ce7b6e48-c68c-426a-bb8b-fc21e3788109",
-      "display_name": "tetrahedron",
-      "original_filename": "tetrahedron.stl",
-      "file_path": "C:\\Users\\vaibh\\OneDrive\\Desktop\\Project\\Ver 0.0.4\\stl files\\tetrahedron.stl",
+      "file_path": "C:\\Users\\vaibh\\OneDrive\\Desktop\\Project\\Ver 0.0.6\\stl files\\cube.stl",
       "visible": true,
       "opacity": 1.0,
       "color": "#D8DDE6",
       "edge_visibility": true,
-      "wireframe": false,
+      "wireframe": true,
       "render_mode": "surface",
       "transform": {},
       "material": {},
       "mesh": {},
       "physics": {},
-      "creation_time": "2026-08-07T13:42:38.087296+00:00",
-      "last_modified": "2026-08-07T13:42:38.087307+00:00"
+      "creation_time": "2026-08-08T12:26:02.433469+00:00",
+      "last_modified": "2026-08-08T12:27:41.758140+00:00"
     }
   ],
   "camera": [
     [
-      4.796579941896033,
-      4.352815793315768,
-      1.6823867632882399
+      0.9639605075765557,
+      -0.19775046201416063,
+      -6.939874689840228
     ],
     [
       0.0,
@@ -51,13 +33,13 @@
       0.0
     ],
     [
-      -0.28868007183212807,
-      -0.05140574252368678,
-      0.9560445940240372
+      0.6246691963079244,
+      0.7782134634385645,
+      0.06459257315640808
     ]
   ],
   "selection": [
-    "ce7b6e48-c68c-426a-bb8b-fc21e3788109"
+    "5b9a12f3-2887-4498-b0f8-7d769ed36e72"
   ],
   "materials": {},
   "mesh": {},
